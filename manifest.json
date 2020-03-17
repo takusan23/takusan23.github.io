@@ -1,7 +1,7 @@
 {
     "name": "profile",
     "short_name": "profile",
-    "theme_color": "80D8FF",
+    "theme_color": "#80D8FF",
     "icons": [
         {
             "src": "./img/icons/manifest_icon.png",
