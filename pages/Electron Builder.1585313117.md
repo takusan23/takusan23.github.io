@@ -1,249 +1,340 @@
 ---
-title: [Android] Material Components のバージョンを 1.0.0 から 1.1.0-alpha08 にして、Theme.MaterialComponentsと戦った話。
-tags: Android MaterialDesign Kotlin
+title: Electronで雑にアプリを作ってWindowsのポータブルアプリとして動くまでやる。 2020/02/28追記
+tags: JavaScript Electron
 author: takusan_23
 slide: false
 ---
-こんばんは。
-虫（蛾？かどうかもわからん）が家に入ってきて怖いです。
-今回はタイトル通りMaterial Componentsのバージョンアップをして見る話です。
+久しぶりにElectronについて**お話します。**
 
-# なぜアップデートしようとしたのか
-A. Snackbarの位置をFloating Action Buttonの上に表示させたかったから。
-[Snackbarsのガイドライン](https://material.io/design/components/snackbars.html#placement)の
-Snackbars and floating action buttons (FABs)
-でFABの上に表示させるのが正しいらしい。
-それで真似ようと思ったのですが、古いのか```setAnchorView（どのViewの上に表示させるか？）```が見つからなかったのでアップデートしようというのが理由。
+# exeファイルにして動かしたい。
+しかし2015年とか2016年の記事がおおい。つらい。~~令和だぞ。~~
 
-# ところで最新バージョンはどこで知れるのか？
+というわけで今回はElectronで適当にアプリを作ってポータブルアプリとしてすぐ使えるようにするところを目標に作っていこうと思います。==インストール不要で動かす！
 
-これ？
-https://github.com/material-components/material-components-android/releases
+# 何作る。
+marqueeタグで🍣を流すだけのアプリ。かんたん。
 
-作成日時では1.1.0-alpha08が最新ですので入れてみようと思います。
-最悪GitHubのちから？を借りて戻せばいいので挑戦です。
+# 作り方
+## セットアップ npm init
+セットアップは自分が書いた過去の記事と同じことしてます。[ここ](https://qiita.com/takusan_23/items/eca19b4111109616bbfa)。
 
-# build.gradleを書き換える
 
-```gradle:app/build.gradle
-    //implementation 'com.google.android.material:material:1.0.0'
-    implementation 'com.google.android.material:material:1.1.0-alpha08'
+適当にフォルダを作成する。
+
+作ったフォルダの中で```Shift+右クリック```で```PowerShell ウィンドウをここに開く```か```コマンド ウィンドウをここで開く```を押します。（Win10は前者。それ以外は後者）。
+
+開いたら中で以下の文を入力します。
+
+```terminal
+npm init -y
+````
+
+これで```package.json```が作成できていれば成功です。
+
+そしたらpackage.jsonを開いて、少し書き換えます。
+
+```"main" : "index.js",```
+↓
+```"main": "./src/main.js",```
+
 ```
-##出会った問題
-
-###レイアウトのエラー
-下の方に書いてあった。
+"scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+```
+↓
 
 ```
-Caused by: java.lang.IllegalArgumentException: The style on this component requires your app theme to be Theme.MaterialComponents (or a descendant).
-```
-
-調べるとテーマがTheme.MaterialComponents系を使わないとだめだよ！ってことらしいです。
-これを解決する方法は2つ。
-#### 解決策その１：レイアウト（xml）ファイルで親のレイアウトの中に```android:theme="@style/Theme.MaterialComponents"```を書き足す。
-こんな感じに
-
-```xml
-<?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:theme="@style/Theme.MaterialComponents"> <!--この行を付け足す。-->
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/name_TextInputLayout"
-        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content">
-        <EditText
-            android:id="@+id/name_editText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:importantForAutofill="no"
-            android:inputType="textMultiLine"
-            android:singleLine="true" />
-    </com.google.android.material.textfield.TextInputLayout>
-</LinearLayout>
+ "scripts": {
+    "start": "electron ."
+  },
 ```
 
-これで一応通るようになる。TextInputLayoutだけ使いたい！！！とかのときはTextInputLayoutの中に```android:theme="@style/Theme.MaterialComponents"```を書き足せば大丈夫です。
+## セットアップ npm install --save-dev electron
 
-##### メリット
-かんたん。TextInputLayoutだけ使いたいなんかはこれでいい気がする。
-改善した方でもう満足した方はお疲れさまです。
+PowerShellまたはコマンドプロンプトの画面はそのまま、次の文を入力しましょう。
 
-#### 解決策その２：styles.xmlを書き換える。
-stack overflowなんかではこっちが多いね。でも**この方法は結構きつい。**ちなみに私はこっちを使った。
-なぜならアプリの外観を結構変えることになる。
-書き換える場所はparentのところ。こうする```parent="Theme.MaterialComponents.Light.DarkActionBar"```。
-以下例です。
-
-```xml
-    <!-- Base application theme. -->
-    <style name="AppTheme" parent="Theme.MaterialComponents.Light.DarkActionBar">
-        <!-- Customize your theme here. -->
-        <item name="colorPrimary">@color/colorPrimary</item>
-        <item name="colorPrimaryDark">@color/colorPrimary</item>
-        <item name="colorAccent">@color/colorPrimaryDark</item>
-    </style>
+```console
+npm install --save-dev electron
 ```
 
-どうでしょう。結構変わったと思いますよ？
+## セットアップ 好きなエディタを開いて
 
-で、ここからは**Theme.MaterialComponents**との戦いです。
+最初に作ったフォルダの中にsrcフォルダを作成してください。（スクリーンショットにicon.icoがありますが気にせず。）
+![image.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/409918/50f257ab-2fac-e705-a5ca-235e207c2496.png)
 
-# Theme.MaterialComponents にして変わったところ。
+作成したら中に。
+```package.json```
+```index.html```
+```main.js```
 
-## 良かったところ
+それぞれ
 
-- Snackbarの表示方法が変わった
-    - 下からすーっと表示？→ふわっと表示？する感じに（自分で見たほうがはやい）
-    - スペースができるようになった。（下に空間ができるようになった）
-
-![Screenshot_20190726-033304_Material_Test.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/409918/c8961ea9-1823-0c05-938a-be07d81428de.png)
-
-
-ほかにもあるかもだけど今回は時間無いので飛ばします。
-
-## 直す必要があったところ
-
-### BottonにBackgroundが設定されてしまう問題の解決方法
-
-参考
-https://stackoverflow.com/questions/52743190/when-use-theme-materialcomponents-light-noactionbar-style-set-button-background
-
-ButtonはButtonでも```androidx.appcompat.widget.AppCompatButton```に変えてあげれば解決です。
-修正前
-
-```xml
-    <Button
-            android:layout_width="wrap_content"
-            android:text="snackbar"
-            android:id="@+id/snackbar_button"
-            android:layout_height="wrap_content"/>
-```
-
-修正後
-
-```xml
-    <androidx.appcompat.widget.AppCompatButton
-            android:layout_width="wrap_content"
-            android:text="snackbar"
-            android:id="@+id/snackbar_button"
-            android:layout_height="wrap_content"/>
-```
-
-ちなみに私はBackgroundにボタンの枠ができる用に設定してたんですけど・・
-```style="@style/Widget.MaterialComponents.Button.OutlinedButton"```
-を指定すれば枠がつくので私はstyleを書き足す形で対応しました。これだと押した時に波紋も出るのでいい感じ。
-
-![Screenshot_20190726-033945_Material_Test.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/409918/1885d4f0-9209-6fa8-bb9c-7cf767fb838a.png)
-
-### AlertDialogのボタンがおかしくなる問題の解決方法
-参考にしました。
-https://stackoverflow.com/questions/52829954/materialcomponents-theme-alert-dialog-buttons
-
-この様になってる場合は
-![Screenshot_20190726-034620_Material_Test.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/409918/64e01862-f158-3d59-2c7f-73f72d50fee9.png)
-
-
-インポートの部分から```import android.app.AlertDialog```を見つけてきてそれを```import androidx.appcompat.app.AlertDialog```に書き換えれば直ります。
-
-```kotlin
-//import android.app.AlertDialog
-import androidx.appcompat.app.AlertDialog
-```
-
-これで大丈夫そうですね。
-![Screenshot_20190726-035018_Material_Test.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/409918/f2a18f6c-513e-0537-e91c-356ca25407aa.png)
-
-今のところはこんな感じですね。
-
-# お疲れさまです
-最後に私のやりたかったFABの上にSnackbarを出すやり方を書いて終わろうと思います。
-やり方は普通にSnackbarを作り、```setAnchorView```のカッコの中にFABやSnackbarの下になるViewを入れてあげればおっけーです。
-例です。
-
-```kotlin:MainActivity
-class MainActivity : AppCompatActivity() {
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-
-        snackbar_button.setOnClickListener {
-            Snackbar.make(findViewById(android.R.id.content), "すなっくばー！", Snackbar.LENGTH_LONG).show()
-        }
-
-        alert_dialog.setOnClickListener {
-            AlertDialog.Builder(this)
-                .setTitle("ボタンが")
-                .setMessage("おかしくない！！！")
-                .setPositiveButton("これでいい") { dialogInterface: DialogInterface, i: Int ->
-
-                }
-                .setNegativeButton("だいじょうぶ", null)
-                .show();
-        }
-
-        fab.setOnClickListener {
-            val snackbar = Snackbar.make(fab,"ボタンの上からこんにちは",Snackbar.LENGTH_LONG)
-            snackbar.anchorView = fab
-            snackbar.show()
-        }
-    }
+```json:package.json
+{
+    "main": "main.js"
 }
 ```
 
-レイアウト
+```html:index.html
+<!DOCTYPE html>
+<html lang="ja">
 
-```xml:activity_main
-<?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout
-        xmlns:android="http://schemas.android.com/apk/res/android"
-        xmlns:tools="http://schemas.android.com/tools"
-        xmlns:app="http://schemas.android.com/apk/res-auto"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        tools:context=".MainActivity">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>寿司が流れるだけのアプリ</title>
+</head>
 
-    <LinearLayout
-            android:layout_width="match_parent"
-            android:gravity="center"
-            android:layout_height="match_parent"
-            android:orientation="vertical">
+<body style="-webkit-app-region: drag;background-color: rgba(157, 204, 224	, .7)">
+    <!-- 寿司が流れるだけ -->
+    <div style="padding: 20px" class="center">
+        <marquee id="marquee" scrollamount="25">
+            <font id="text" size="7">🍣</font>
+        </marquee>
+    </div>
+</body>
 
-        <Button
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="wrap_content"
-                android:text="snackbar"
-                android:id="@+id/snackbar_button"
-                android:layout_height="wrap_content"/>
-
-        <Button
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="wrap_content"
-                android:text="AlertDialog"
-                android:id="@+id/alert_dialog"
-                android:layout_height="wrap_content"/>
-
-    </LinearLayout>
-
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/fab"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="bottom|end"
-            android:layout_margin="16dp"
-            app:srcCompat="@drawable/ic_laptop_windows_black_24dp"/>
-
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+</html>
 ```
 
-実行するとこんな感じ
-![Screenshot_20190726-035632_Material_Test.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/409918/58fff32c-b13c-7284-7f0c-38bb292ab384.png)
+```javascript:main.js
+// Modules to control application life and create native browser window
+const { app, BrowserWindow, Menu } = require('electron')
+
+// Keep a global reference of the window object, if you don't, the window will
+// be closed automatically when the JavaScript object is garbage collected.
+let mainWindow
+
+function createWindow() {
+    // Create the browser window.
+    mainWindow = new BrowserWindow({
+        width: 300,         //横
+        height: 150,        //縦
+        frame: false,       //フレームなくす
+        transparent: true,   //背景透明化
+        alwaysOnTop: true,         //最前面
+        webPreferences: {
+            nodeIntegration: true   //これ書く。
+        }
+    })
+
+    // and load the index.html of the app.
+    mainWindow.loadFile('./src/index.html')
+    //メニューバー削除
+    Menu.setApplicationMenu(null)
+
+    // Open the DevTools.
+    // mainWindow.webContents.openDevTools()
+
+    // Emitted when the window is closed.
+    mainWindow.on('closed', function () {
+        // Dereference the window object, usually you would store windows
+        // in an array if your app supports multi windows, this is the time
+        // when you should delete the corresponding element.
+        mainWindow = null
+    })
+}
+
+// This method will be called when Electron has finished
+// initialization and is ready to create browser windows.
+// Some APIs can only be used after this event occurs.
+app.on('ready', createWindow)
+
+// Quit when all windows are closed.
+app.on('window-all-closed', function () {
+    // On macOS it is common for applications and their menu bar
+    // to stay active until the user quits explicitly with Cmd + Q
+    if (process.platform !== 'darwin') app.quit()
+})
+
+app.on('activate', function () {
+    // On macOS it's common to re-create a window in the app when the
+    // dock icon is clicked and there are no other windows open.
+    if (mainWindow === null) createWindow()
+})
+
+// In this file you can include the rest of your app's specific main process
+// code. You can also put them in separate files and require them here.
+```
+
+このまま実行すると半透明で小さくてどのウィンドウより前に出るただ🍣が流れるウィンドウができてるはずです。
+![SnapCrab_NoName_2019-8-22_0-1-26_No-00.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/409918/d2ef021e-e0b8-de7c-38fb-74ca80adf223.png)
+
+ちなみに右クリックすることで閉じたり最大化できます。
+![SnapCrab_寿司が流れるだけのアプリ_2019-8-21_23-58-10_No-00.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/409918/01f43431-50e5-9aba-9fbe-0322af15944a.png)
+
+とってもいらないアプリが完成しました。
+
+## electron-builderをいれる
+これはyarnをインストールする必要があります。インストーラーに沿ってやればできます。
+ちゃんとインストールできたかどうかは以下の文をいれてバージョンが出ればおｋです。
+
+```console
+yarn -v
+```
+
+そしたら以下の文をいれて```electron-builder```をインストールします。
+
+```console
+yarn global add electron-builder
+```
+
+## package.jsonに書き足す
+どっちのpackage.jsonか？srcじゃない方。npm initで作成したほう。
+開いてみて明らかに下の中身と違う場合は開くの間違えてます。
+
+```json:package.json
+{
+  "name": "sushi_portable",
+  "version": "1.0.0",
+  "description": "寿司の絵文字を眺めるアプリ。",
+  "main": "./src/main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": [],
+  "author": "sushi",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^6.0.3"
+  }
+}
+```
+
+そしてすこし書き足します。buildから増えました。
+
+```json:package.json
+{
+  "name": "sushi_portable",
+  "version": "1.0.0",
+  "description": "寿司の絵文字を眺めるアプリ。",
+  "main": "./src/main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": [],
+  "author": "sushi",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^6.0.3"
+  },
+  "build": {
+    "productName": "寿司の絵文字眺めるやつ",
+    "appId": "sushi.emoji",
+    "win": {
+      "target": "portable",
+      "icon": "./src/icon.ico"
+    }
+  }
+}
+```
+
+productNameが名前、appIdはアプリケーションID（Application User Model ID）らしいです？
+```target```には```portable```にします。これでexeファイルダブルクリックで起動できるアプリになります。ポータブルアプリ。
+```nsis```にすればインストール形式になるそうです？。（要検証）
+```icon```はアイコン画像のパスです。srcの中に入れればいいのですが、拡張子がicoなので画像ファイルを何らかの方法でicoに変換する必要があります。ただし、一つ条件があって画像サイズを256×256にする必要があるようです。
+
+## ポータブルアプリ作成
+ターミナル（PowerShell・コマンドプロンプト）で以下の文を入力。
+
+```console
+electron-builder build --win
+```
+
+あとは終わるまで待ちましょう。
+![image.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/409918/50abd5ca-91a3-2152-e577-5b82e9b24296.png)
+
+おわると```dist```という名前のフォルダができてるのでその中のにあるexeファイルをダブルクリックして少し待てばウィンドウが出てきます。
+
+![SnapCrab_NoName_2019-8-22_0-30-47_No-00.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/409918/9fdcb99d-00ab-b83d-71d7-1f1d9d7d90bb.png)
 
 
-お疲れさまでした！
-どうでもいいですが書いてる途中でサブ機の中古レッツノートくんがいきなりよくわからん画面になりましたが再起動したら直りました。
+**完成です！！！**
+
+## 追記
+
+![SnapCrab_NoName_2019-8-22_0-39-35_No-00.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/409918/f0d114e3-99ed-fb82-441e-19ac8a9097f8.png)
+
+ソースコードです→https://github.com/takusan23/SushiPortable
+
+## 更に追記　2020/02/28
+
+コメントでelectron-builderが見つからんってあったので調べたら[公式サイト](https://www.electron.build/)と導入方法が違ったので追記しておきます。
+
+ちなみにyarnのバージョンは1.22.0です。
+
+とりあえずelectron-builderを消しましょう。
+
+```console
+yarn global remove electron-builder
+```
+
+消せたら以下の文を入力してなにもないことを確認します
+
+```console
+yarn global list --depth=0
+```
+![image.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/409918/226b19ef-9f95-0116-fb30-471e25eb2d0f.png)
+
+次に公式と同じ方法でelectron-builderを入れます。
+
+```console
+yarn add electron-builder --dev
+```
+
+成功すれば```package.json```のdevDependenciesの中に
+```"electron-builder": "^22.3.2"```が追加されているはずです。
+
+ちなみにelectron-builderと入力しても無いって言われるだけです。
+![image.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/409918/b0192e15-4f4b-915d-4bef-0bfaa01386e6.png)
+
+次にpackage.jsonに書き足してなければ、
+[package.jsonに書き足す](https://qiita.com/takusan_23/items/0ae82e0a4a1ea6469bbd#packagejson%E3%81%AB%E6%9B%B8%E3%81%8D%E8%B6%B3%E3%81%99)で書き足してきてください。ここは同じ。
+
+最後に以下のコマンドを入力すれば処理が始まるはずです。
+
+```console
+yarn electron-builder --win
+```
+
+electron-builderがうまく動かない場合は試してみてください。（私はどちらでも動いたのですが；；）
+
+![image.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/409918/b41f1f15-2800-b2ce-b128-7b24c7a9c839.png)
+
+あと一応```package.json```置いときますね
+
+```json:package.json
+{
+  "name": "ElectronBuilderSample",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "takusan23",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^8.0.2",
+    "electron-builder": "^22.3.2"
+  },
+  "build": {
+    "productName": "てすと",
+    "appId": "aiueo.test",
+    "win": {
+      "target": "portable",
+      "icon": "src/icon.ico"
+    }
+  }
+}
+```
+
+### おわりに
+exeダブルクリックから数秒～数十秒かかるのは仕様？わからん！
+
+## 参考にしました。
+https://qiita.com/SallyAcolyte/items/94ed26ab62b8b32b1b2c
+http://var.blog.jp/archives/78877702.html
